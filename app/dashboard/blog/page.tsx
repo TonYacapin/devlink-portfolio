@@ -1,9 +1,12 @@
+// app/dashboard/blog/page.tsx
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Code2, ArrowLeft } from "lucide-react"
+import { Code2, ArrowLeft, Plus, Edit, Trash2, Eye, Calendar, Clock } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { BlogManager } from "@/components/blog-manager"
 
 export default async function BlogPage() {
   const supabase = await createClient()
@@ -16,6 +19,13 @@ export default async function BlogPage() {
     redirect("/auth/login")
   }
 
+  // Fetch user's blog posts
+  const { data: blogPosts } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -27,7 +37,7 @@ export default async function BlogPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="container mx-auto px-4 py-8 max-w-6xl">
         <Link href="/dashboard">
           <Button variant="ghost" size="sm" className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -37,20 +47,10 @@ export default async function BlogPage() {
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Blog Posts</h1>
-          <p className="text-muted-foreground">Write and publish articles</p>
+          <p className="text-muted-foreground">Write and publish articles to share your knowledge</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Coming Soon</CardTitle>
-            <CardDescription>Blog management features are being built</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              You&apos;ll soon be able to write and publish blog posts here.
-            </p>
-          </CardContent>
-        </Card>
+        <BlogManager initialPosts={blogPosts || []} />
       </main>
     </div>
   )
