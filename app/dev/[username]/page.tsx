@@ -37,6 +37,20 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
     projectsError 
   })
 
+  // Get skills for this user
+  const { data: skills, error: skillsError } = await supabase
+    .from("skills")
+    .select("*")
+    .eq("user_id", profile.id)
+    .order("proficiency_level", { ascending: false })
+    .order("is_featured", { ascending: false })
+    .order("name", { ascending: true })
+
+  console.log("Skills query result:", { 
+    skillsCount: skills?.length, 
+    skillsError 
+  })
+
   // Sort projects by featured status and display order
   const sortedProjects = (projects || [])
     .sort((a, b) => {
@@ -46,6 +60,15 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
       // Then by display_order
       return a.display_order - b.display_order
     })
+
+  // Group skills by category
+    const skillsByCategory = (skills || []).reduce((acc: Record<string, any[]>, skill: any) => {
+      if (!acc[skill.category]) {
+        acc[skill.category] = []
+      }
+      acc[skill.category].push(skill)
+      return acc
+    }, {} as Record<string, any[]>)
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,10 +86,34 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
         </p>
       </div>
 
+      {/* Skills Section */}
+      {skills && skills.length > 0 && (
+        <div className="container mx-auto px-6 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6 text-center">Skills & Technologies</h2>
+            
+            <div className="grid gap-6 md:grid-cols-2">
+              {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
+                <div key={category} className="bg-card rounded-lg border border-border p-6">
+                  <h3 className="font-semibold text-lg mb-4 text-center">{category}</h3>
+                  <div className="space-y-3">
+                    {categorySkills.map((skill) => (
+                      <SkillItem key={skill.id} skill={skill} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Projects Section */}
       <div className="container mx-auto px-6 pb-12">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold mb-8 text-center">Projects ({sortedProjects.length})</h2>
+          <h2 className="text-2xl font-bold mb-8 text-center">
+            Projects {projects && projects.length > 0 && `(${sortedProjects.length})`}
+          </h2>
           
           {sortedProjects.length === 0 ? (
             <div className="text-center py-12">
@@ -80,6 +127,49 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
             </div>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Skill Item Component
+function SkillItem({ skill }: { skill: any }) {
+  const renderProficiencyStars = (level: number) => {
+    const stars = []
+    
+    // level is between 1-5
+    for (let i = 1; i <= 5; i++) {
+      if (i <= level) {
+        // Full star
+        stars.push(<Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />)
+      } else {
+        // Empty star
+        stars.push(<Star key={i} className="h-3 w-3 text-muted-foreground" />)
+      }
+    }
+    
+    return stars
+  }
+
+  return (
+    <div className="flex items-center justify-between py-2">
+      <div className="flex items-center gap-3">
+        <span className="font-medium text-sm">{skill.name}</span>
+        {skill.is_featured && (
+          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+            Featured
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {renderProficiencyStars(skill.proficiency_level)}
+        </div>
+        {skill.years_of_experience && (
+          <span className="text-xs text-muted-foreground">
+            {skill.years_of_experience}y
+          </span>
+        )}
       </div>
     </div>
   )
@@ -159,6 +249,15 @@ function ProjectCard({ project }: { project: any }) {
         </div>
       </div>
     </div>
+  )
+}
+
+// Star Icon Component
+function Star({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </svg>
   )
 }
 
