@@ -58,7 +58,7 @@ export default async function DashboardPage() {
           </Link>
           <div className="flex items-center gap-4">
             {profile?.username && (
-              <Link href={`/${profile.username}`} target="_blank">
+              <Link href={`/dev/${profile.username}`} target="_blank">
                 <Button variant="outline" size="sm">
                   <ExternalLink className="h-4 w-4 mr-2" />
                   View Profile
