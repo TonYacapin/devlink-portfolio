@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { Calendar, Clock } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default async function PublicProfile({ params }: { params: Promise<{ username: string }> }) {
   // Await the params object
@@ -51,6 +53,20 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
     skillsError 
   })
 
+  // Get blog posts for this user (only published ones)
+  const { data: blogPosts, error: blogPostsError } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .eq("user_id", profile.id)
+    .eq("is_published", true)
+    .order("published_at", { ascending: false })
+    .limit(3) // Show only latest 3 posts
+
+  console.log("Blog posts query result:", { 
+    blogPostsCount: blogPosts?.length, 
+    blogPostsError 
+  })
+
   // Sort projects by featured status and display order
   const sortedProjects = (projects || [])
     .sort((a, b) => {
@@ -62,13 +78,13 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
     })
 
   // Group skills by category
-    const skillsByCategory = (skills || []).reduce((acc: Record<string, any[]>, skill: any) => {
-      if (!acc[skill.category]) {
-        acc[skill.category] = []
-      }
-      acc[skill.category].push(skill)
-      return acc
-    }, {} as Record<string, any[]>)
+  const skillsByCategory = (skills || []).reduce((acc: Record<string, any[]>, skill: any) => {
+    if (!acc[skill.category]) {
+      acc[skill.category] = []
+    }
+    acc[skill.category].push(skill)
+    return acc
+  }, {} as Record<string, any[]>)
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,6 +124,36 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
         </div>
       )}
 
+      {/* Blog Posts Section */}
+      {blogPosts && blogPosts.length > 0 && (
+        <div className="container mx-auto px-6 pb-8">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6 text-center">Latest Blog Posts</h2>
+            
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {blogPosts.map((post) => (
+                <BlogPostCard key={post.id} post={post} />
+              ))}
+            </div>
+
+            {/* View All Blog Posts Link */}
+            {blogPosts.length >= 3 && (
+              <div className="text-center mt-8">
+                <Link 
+                  href={`/${profile.username}/blog`}
+                  className="inline-flex items-center gap-2 text-primary hover:underline font-medium px-4 py-2 border border-primary rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors"
+                >
+                  View all blog posts
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Projects Section */}
       <div className="container mx-auto px-6 pb-12">
         <div className="max-w-4xl mx-auto">
@@ -129,6 +175,75 @@ export default async function PublicProfile({ params }: { params: Promise<{ user
         </div>
       </div>
     </div>
+  )
+}
+
+// Blog Post Card Component
+function BlogPostCard({ post }: { post: any }) {
+  const formattedDate = post.published_at 
+    ? new Date(post.published_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    : ''
+
+  return (
+    <Link href={`/blog/${post.slug}`}>
+      <Card className="h-full hover:shadow-lg transition-shadow duration-300 cursor-pointer group">
+        {/* Cover Image */}
+        {post.cover_image && (
+          <div className="aspect-video relative overflow-hidden rounded-t-lg">
+            <img
+              src={post.cover_image}
+              alt={post.title}
+              className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+        )}
+        
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
+            {post.title}
+          </CardTitle>
+          <CardDescription className="line-clamp-2">
+            {post.excerpt}
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              <span>{formattedDate}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span>{post.reading_time} min</span>
+            </div>
+          </div>
+
+          {/* Tags */}
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              {post.tags.slice(0, 2).map((tag: string, index: number) => (
+                <span 
+                  key={index} 
+                  className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded"
+                >
+                  {tag}
+                </span>
+              ))}
+              {post.tags.length > 2 && (
+                <span className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded">
+                  +{post.tags.length - 2}
+                </span>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
 
