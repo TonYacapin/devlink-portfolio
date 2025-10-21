@@ -1,9 +1,11 @@
+// app/dashboard/social/page.tsx
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Code2, ArrowLeft } from "lucide-react"
+import { Code2, ArrowLeft, Plus, Edit, Trash2, ExternalLink } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { SocialLinksManager } from "@/components/social-links-manager"
 
 export default async function SocialPage() {
   const supabase = await createClient()
@@ -15,6 +17,13 @@ export default async function SocialPage() {
   if (!user) {
     redirect("/auth/login")
   }
+
+  // Fetch user's social links
+  const { data: socialLinks } = await supabase
+    .from("social_links")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("display_order", { ascending: true })
 
   return (
     <div className="min-h-screen bg-background">
@@ -37,20 +46,10 @@ export default async function SocialPage() {
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Social Links</h1>
-          <p className="text-muted-foreground">Connect your social media profiles</p>
+          <p className="text-muted-foreground">Connect your social media profiles and websites</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Coming Soon</CardTitle>
-            <CardDescription>Social links management features are being built</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              You&apos;ll soon be able to add and manage your social media links here.
-            </p>
-          </CardContent>
-        </Card>
+        <SocialLinksManager initialLinks={socialLinks || []} />
       </main>
     </div>
   )
